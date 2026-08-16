@@ -1,0 +1,23 @@
+{
+    "dataset_size": 283726,
+    "normal_transactions": 283253,
+    "fraud_transactions": 473,
+    "fraud_rate": 0.001667101358352777,
+    "best_model_by_pr_auc": "Random Forest",
+    "best_model_pr_auc": 0.8118040369615392,
+    "best_model_roc_auc": 0.9489328473785476,
+    "best_model_precision": 0.9459459459459459,
+    "best_model_recall": 0.7368421052631579,
+    "best_model_f1": 0.8284023668639053,
+    "xgboost_validation_best_threshold": 0.5400000000000001,
+    "large_effect_numerical_features": 14,
+    "medium_effect_numerical_features": 3,
+    "small_effect_numerical_features": 8,
+    "behavioral_features_analyzed": [
+        "Amount_Log",
+        "Amount_Category",
+        "Transactions_Last_1H",
+        "Transactions_Last_24H",
+        "Amount_ZScore"
+    ]
+}
