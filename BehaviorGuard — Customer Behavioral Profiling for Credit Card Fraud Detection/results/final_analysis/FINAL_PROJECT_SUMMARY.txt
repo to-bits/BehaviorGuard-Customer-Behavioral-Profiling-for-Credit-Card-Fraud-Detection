@@ -1,0 +1,51 @@
+BEHAVIORGUARD — FINAL PROJECT SUMMARY:
+
+Dataset size: 283,726
+Normal transactions: 283,253
+Fraud transactions: 473
+Fraud rate: 0.1667%
+
+MODEL BENCHMARK
+---------------
+              Model  Precision  Recall     F1  PR_AUC  ROC_AUC
+Logistic Regression     0.0507  0.8737 0.0958  0.6896   0.9694
+      Random Forest     0.9459  0.7368 0.8284  0.8118   0.9489
+            XGBoost     0.9259  0.7895 0.8523  0.8105   0.9662
+
+Best model by PR-AUC: Random Forest
+XGBoost validation-selected threshold: 0.54
+
+TOP STATISTICAL FEATURES
+------------------------
+Feature  Adjusted_P_Value  Cliffs_Delta Effect_Size
+    V14               0.0     -0.894278       Large
+     V4               0.0      0.872511       Large
+    V12               0.0     -0.868913       Large
+    V11               0.0      0.829646       Large
+    V10               0.0     -0.821164       Large
+     V3               0.0     -0.817280       Large
+     V2               0.0      0.699607       Large
+    V16               0.0     -0.682871       Large
+     V9               0.0     -0.682572       Large
+     V7               0.0     -0.659248       Large
+    V17               0.0     -0.600945       Large
+     V1               0.0     -0.579075       Large
+     V6               0.0     -0.537483       Large
+    V21               0.0      0.486478       Large
+    V18               0.0     -0.466414      Medium
+
+BEHAVIORAL FEATURES
+-------------------
+              Feature  Adjusted_P_Value  Cliffs_Delta Effect_Size
+           Amount_Log          0.000032     -0.111543  Negligible
+ Transactions_Last_1H          0.000000     -0.154307       Small
+Transactions_Last_24H          0.000000     -0.146077  Negligible
+        Amount_ZScore          0.000032     -0.111543  Negligible
+
+INTERPRETATION
+--------------
+1. The dataset is extremely imbalanced, so PR-AUC, recall, precision and F1 are more informative than accuracy alone.
+2. Several anonymized V-features show very strong statistical separation between normal and fraudulent transactions.
+3. Engineered behavioral features should be interpreted as complementary signals rather than automatically assuming they are individually strong fraud predictors.
+4. Statistical significance is interpreted together with effect size because the dataset is large.
+5. The XGBoost threshold is selected on validation data and the test set is used only for final evaluation.
