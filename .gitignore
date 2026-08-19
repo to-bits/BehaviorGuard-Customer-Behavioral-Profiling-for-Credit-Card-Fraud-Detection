@@ -128,3 +128,26 @@ Desktop.ini
 *.swp
 *.swo
 *~
+
+# Local frontend tooling and generated TypeScript/Vite output
+.tools/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
+
+# Root-level package-manager artifacts accidentally created outside frontend/
+/package-lock.json
+/node_modules/
+
+# Local development environment files
+*.local
+.python-version
+
+# Jupyter runtime and generated notebook metadata
+.ipynb_checkpoints/
+*.nbconvert.ipynb
+
+FRONTEND_ARCHITECTURE
