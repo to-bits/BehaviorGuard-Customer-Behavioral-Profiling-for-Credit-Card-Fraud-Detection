@@ -150,4 +150,4 @@ frontend/vite.config.d.ts
 .ipynb_checkpoints/
 *.nbconvert.ipynb
 
-FRONTEND_ARCHITECTURE
+FRONTEND_ARCHITECTURE.md
