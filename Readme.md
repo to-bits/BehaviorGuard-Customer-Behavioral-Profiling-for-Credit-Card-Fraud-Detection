@@ -1,5 +1,20 @@
 # BehaviorGuard — Customer Behavioral Profiling for Credit Card Fraud Detection
 
+## Run the API
+
+From the repository root:
+
+```bash
+source .venv/bin/activate
+pip install -r requirements.txt
+cd "BehaviorGuard — Customer Behavioral Profiling for Credit Card Fraud Detection"
+uvicorn api.main:app --reload
+```
+
+The service is available at `http://127.0.0.1:8000`. Interactive API documentation is available at `/docs`.
+
+The API loads the existing XGBoost pipeline once at startup. Configure local frontend origins with `BEHAVIORGUARD_CORS_ORIGINS` as a comma-separated list when needed.
+
 > An ML-powered fraud detection system that learns customer spending behavior, identifies unusual transaction patterns, and generates explainable fraud risk scores.
 
 ---

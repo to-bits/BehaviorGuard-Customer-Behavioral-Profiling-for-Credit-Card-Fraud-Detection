@@ -7,3 +7,6 @@ xgboost
 jupyter
 joblib
 shap
+fastapi
+uvicorn[standard]
+pytest
