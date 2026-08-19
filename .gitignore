@@ -149,5 +149,3 @@ frontend/vite.config.d.ts
 # Jupyter runtime and generated notebook metadata
 .ipynb_checkpoints/
 *.nbconvert.ipynb
-
-FRONTEND_ARCHITECTURE.md

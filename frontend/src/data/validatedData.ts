@@ -1,4 +1,4 @@
-import type { Factor } from "../types";
+import type { Factor, TransactionPayload } from "../types";
 
 export const validatedSummary = {
   datasetSize: 283726,
@@ -20,7 +20,29 @@ export const validatedSummary = {
     tp: 75,
   },
   randomForest: { precision: 0.9459459459459459, recall: 0.7368421052631579, f1: 0.8284023668639053, prAuc: 0.8118040369615392, rocAuc: 0.9489328473785476 },
+  logisticRegression: { precision: 0.05067155067155067, recall: 0.8736842105263158, f1: 0.09578765147143682, prAuc: 0.6896032341959469, rocAuc: 0.9693908873258149 },
 };
+
+// Selected rows from the saved validation threshold analysis. The slider only
+// changes this analysis view; it never mutates the saved production threshold.
+export const validatedThresholdAnalysis = [
+  { threshold: 0.05, precision: 0.6346, recall: 0.8684, f1: 0.7333 },
+  { threshold: 0.10, precision: 0.7416, recall: 0.8684, f1: 0.8 },
+  { threshold: 0.20, precision: 0.8684, recall: 0.8684, f1: 0.8684 },
+  { threshold: 0.30, precision: 0.9155, recall: 0.8553, f1: 0.8844 },
+  { threshold: 0.40, precision: 0.9286, recall: 0.8553, f1: 0.8904 },
+  { threshold: 0.50, precision: 0.9559, recall: 0.8553, f1: 0.9028 },
+  { threshold: 0.54, precision: 0.9701, recall: 0.8553, f1: 0.9091 },
+  { threshold: 0.70, precision: 0.9701, recall: 0.8553, f1: 0.9091 },
+  { threshold: 0.84, precision: 0.9697, recall: 0.8421, f1: 0.9014 },
+  { threshold: 0.95, precision: 0.9692, recall: 0.8289, f1: 0.8936 },
+];
+
+export const validatedModelMetrics = [
+  { model: "Logistic Regression", ...validatedSummary.logisticRegression },
+  { model: "Random Forest", ...validatedSummary.randomForest },
+  { model: "XGBoost", ...validatedSummary.xgboost },
+];
 
 export const validatedHourlyFraud = [
   [0, 0.07846], [1, 0.23764], [2, 1.45103], [3, 0.48753], [4, 1.04356], [5, 0.36814],
@@ -50,7 +72,7 @@ export const validatedImportance: Factor[] = [
   ["V17", 0.0168796], ["V13", 0.014939378], ["Transactions_Last_1H", 0.004280864],
 ].map(([feature, contribution]) => ({ feature: String(feature), contribution: Number(contribution), direction: "toward_fraud" as const, display_value: `mean model importance ${Number(contribution).toFixed(3)}` }));
 
-export const demoTransactionPayload: Record<string, unknown> = {
+export const demoTransactionPayload: TransactionPayload = {
   Time: 0, V1: -1.359807, V2: -0.072781, V3: 2.536347, V4: 1.378155, V5: -0.338321, V6: 0.462388,
   V7: 0.239599, V8: 0.098698, V9: 0.363787, V10: 0.090794, V11: -0.5516, V12: -0.617801, V13: -0.99139,
   V14: -0.311169, V15: 1.468177, V16: -0.470401, V17: 0.207971, V18: 0.025791, V19: 0.403993, V20: 0.251412,

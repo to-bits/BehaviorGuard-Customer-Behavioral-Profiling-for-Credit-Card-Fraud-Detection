@@ -30,6 +30,13 @@ def test_health_and_model_info():
     assert "path" not in info.json()
 
 
+def test_model_contract_is_ordered_and_threshold_is_loaded():
+    with TestClient(app):
+        assert list(app.state.model.feature_names_in_) == MODEL_FEATURES
+        assert app.state.scaler is app.state.model.named_steps["preprocessor"]
+        assert app.state.threshold == 0.54
+
+
 def test_predict_and_explain_contracts():
     with TestClient(app) as client:
         prediction = client.post("/predict", json=_payload())
@@ -37,13 +44,17 @@ def test_predict_and_explain_contracts():
 
     assert prediction.status_code == 200
     prediction_body = prediction.json()
-    assert set(prediction_body) == {
+    assert {
+        "prediction_id",
+        "timestamp",
+        "amount",
         "fraud_probability",
         "risk_score",
         "risk_level",
         "decision",
         "model_version",
-    }
+        "threshold",
+    }.issubset(prediction_body)
     assert 0 <= prediction_body["fraud_probability"] <= 1
 
     assert explanation.status_code == 200
@@ -52,6 +63,27 @@ def test_predict_and_explain_contracts():
     assert explanation_body["top_positive_contributors"] or explanation_body[
         "top_negative_contributors"
     ]
+
+
+def test_prediction_persistence_and_alert_status():
+    with TestClient(app) as client:
+        created = client.post("/predict", json=_payload()).json()
+        prediction_id = created["prediction_id"]
+        recent = client.get("/predictions?limit=10")
+        alerts = client.get("/alerts?limit=10")
+        detail = client.get(f"/transactions/{prediction_id}")
+        status = client.patch(
+            f"/alerts/{prediction_id}",
+            json={"status": "reviewing"},
+        )
+
+    assert recent.status_code == 200
+    assert any(item["prediction_id"] == prediction_id for item in recent.json()["items"])
+    assert alerts.status_code == 200
+    assert detail.status_code == 200
+    assert detail.json()["behavioral_summary"]["time_period"] == "Night"
+    assert status.status_code == 200
+    assert status.json()["investigation_status"] == "reviewing"
 
 
 def test_invalid_request_returns_clear_validation_error():

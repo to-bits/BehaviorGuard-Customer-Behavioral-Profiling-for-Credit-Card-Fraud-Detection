@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from typing import Any, Literal
 
@@ -31,7 +32,7 @@ MODEL_FEATURES = [
 class TransactionRequest(BaseModel):
     """The stable frontend input contract for one processed transaction."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
     Time: float
     V1: float
@@ -77,11 +78,15 @@ class TransactionRequest(BaseModel):
 
 
 class PredictionResponse(BaseModel):
+    prediction_id: str
+    timestamp: str
+    amount: float
     fraud_probability: float
     risk_score: float
     risk_level: Literal["low", "medium", "high"]
     decision: Literal["normal", "fraud"]
     model_version: str
+    threshold: float
 
 
 class FactorResponse(BaseModel):
@@ -108,6 +113,25 @@ class ModelInfoResponse(BaseModel):
     model_version: str
     feature_count: int
     threshold: float
+
+
+class PredictionRecord(PredictionResponse):
+    investigation_status: Literal["new", "reviewing", "resolved"] = "new"
+
+
+class AlertStatusUpdate(BaseModel):
+    status: Literal["new", "reviewing", "resolved"]
+
+
+class PredictionListResponse(BaseModel):
+    items: list[PredictionRecord]
+
+
+class TransactionDetailResponse(PredictionRecord):
+    behavioral_summary: dict[str, float | str]
+
+
+PREDICTIONS: dict[str, TransactionDetailResponse] = {}
 
 
 def _cors_origins() -> list[str]:
@@ -150,7 +174,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins(),
     allow_credentials=False,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PATCH"],
     allow_headers=["Content-Type"],
 )
 
@@ -165,11 +189,15 @@ def _prediction(request: Request, transaction: TransactionRequest) -> dict[str, 
     except (TypeError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {
+        "prediction_id": "",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "amount": float(transaction.Amount),
         "fraud_probability": result["fraud_probability"],
         "risk_score": result["risk_score"],
         "risk_level": result["risk_level"],
         "decision": result["decision"],
         "model_version": request.app.state.model_version,
+        "threshold": float(request.app.state.threshold),
     }
 
 
@@ -194,7 +222,23 @@ def model_info(request: Request) -> ModelInfoResponse:
 @app.post("/predict", response_model=PredictionResponse)
 def predict(request: Request, transaction: TransactionRequest) -> PredictionResponse:
     LOGGER.info("Scoring transaction")
-    return PredictionResponse(**_prediction(request, transaction))
+    import uuid
+
+    result = _prediction(request, transaction)
+    result["prediction_id"] = f"pred_{uuid.uuid4().hex[:12]}"
+    record = TransactionDetailResponse(
+        **result,
+        behavioral_summary={
+            "hour": transaction.Hour,
+            "time_period": transaction.Time_Period,
+            "amount_category": transaction.Amount_Category,
+            "transactions_last_1h": transaction.Transactions_Last_1H,
+            "transactions_last_24h": transaction.Transactions_Last_24H,
+            "amount_z_score": transaction.Amount_ZScore,
+        },
+    )
+    PREDICTIONS[record.prediction_id] = record
+    return PredictionResponse(**record.model_dump())
 
 
 @app.post("/explain", response_model=ExplainResponse)
@@ -208,9 +252,52 @@ def explain(
 
     LOGGER.info("Explaining transaction")
     prediction = _prediction(request, transaction)
+    prediction["prediction_id"] = ""
     explanation = request.app.state.explainer.explain_prediction(
         transaction.to_frame(),
         prediction,
         top_n=top_n,
     )
     return ExplainResponse(**explanation)
+
+
+@app.get("/predictions", response_model=PredictionListResponse)
+def recent_predictions(limit: int = 20) -> PredictionListResponse:
+    if not 1 <= limit <= 100:
+        raise HTTPException(status_code=422, detail="limit must be between 1 and 100")
+    records = sorted(
+        PREDICTIONS.values(),
+        key=lambda item: item.timestamp,
+        reverse=True,
+    )[:limit]
+    return PredictionListResponse(items=[PredictionRecord(**record.model_dump()) for record in records])
+
+
+@app.get("/alerts", response_model=PredictionListResponse)
+def high_risk_alerts(limit: int = 20) -> PredictionListResponse:
+    if not 1 <= limit <= 100:
+        raise HTTPException(status_code=422, detail="limit must be between 1 and 100")
+    records = [
+        record for record in PREDICTIONS.values()
+        if record.decision == "fraud"
+    ]
+    records.sort(key=lambda item: item.timestamp, reverse=True)
+    return PredictionListResponse(items=[PredictionRecord(**record.model_dump()) for record in records[:limit]])
+
+
+@app.get("/transactions/{prediction_id}", response_model=TransactionDetailResponse)
+def transaction_detail(prediction_id: str) -> TransactionDetailResponse:
+    record = PREDICTIONS.get(prediction_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Prediction not found")
+    return record
+
+
+@app.patch("/alerts/{prediction_id}", response_model=PredictionRecord)
+def update_alert_status(prediction_id: str, update: AlertStatusUpdate) -> PredictionRecord:
+    record = PREDICTIONS.get(prediction_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Prediction not found")
+    updated = record.model_copy(update={"investigation_status": update.status})
+    PREDICTIONS[prediction_id] = TransactionDetailResponse(**updated.model_dump())
+    return PredictionRecord(**updated.model_dump())
